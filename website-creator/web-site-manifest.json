@@ -1,0 +1,8 @@
+{
+    "files": [
+        "./quickconnect.html",
+        "./css/style.css",
+        "./js/aws-sdk.min-qc.js",
+		"./js/quickconnect.js"
+    ]
+}

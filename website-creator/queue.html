@@ -1,0 +1,420 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Amazon Connect - Queue API's</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta content="utf-8" http-equiv="encoding">
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    
+    <script src=https://cdn.jsdelivr.net/npm/jquery@3.5/dist/jquery.min.js></script>
+    
+        
+    <script src="js/queue.js"></script>
+    <script src="js/aws-sdk.min-queue.js"></script>
+    
+    
+    <script src=https://cdn.jsdelivr.net/npm/dna.js@1.6/dist/dna.min.js></script>
+    <script src=https://cdn.jsdelivr.net/npm/web-ignition@1.2/dist/library.min.js></script>
+    
+    <link rel=stylesheet href=https://cdn.jsdelivr.net/npm/pretty-print-json@0.2/dist/pretty-print-json.css>
+    <script src=https://cdn.jsdelivr.net/npm/pretty-print-json@0.2/dist/pretty-print-json.js></script>
+    <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>    
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.21/sl-1.3.1/datatables.min.css"/>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.21/sl-1.3.1/datatables.min.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    
+<style>
+    #section-rp-main {
+        padding: 10px;
+        max-width: 250px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+        overflow: auto;
+    }
+    #section-json-output {
+        padding: 10px;
+        max-width: 550px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+    }
+    
+    #section-rp-list {
+        padding: 10px;
+        max-width: 600px;
+        height: 900px;
+        margin-left: 0px;
+        float: left;
+    }
+    
+    #rpFormatted{
+        white-space: break-spaces;
+        word-break: break-word;
+    }
+    #rpDivFormatted{
+        overflow: scroll;
+        height: 830px;
+    }        
+    #manageRPdialog{
+        display: flex;    align-items: center;  justify-content: center;    
+    }
+    table.tblDetails {
+      border-collapse: collapse;
+      width: 700px;
+    }
+    
+    table.tblDetails td, table.tblDetails th {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    
+    table.tblDetails tr:nth-child(even){background-color: #f2f2f2;}
+    
+    table.tblDetails tr:hover {background-color: #ddd;}
+    
+    table.tblDetails th {
+      padding-top: 12px;
+      padding-bottom: 12px;
+      text-align: left;
+      color: black;
+    }
+    table.tblDetails label{
+        display: inline-block;
+        float: right;
+        height: 1em;
+        line-height: 1em;
+        padding: 6px 0 0;
+        width: 100%; 
+        font-size: 1em;
+        margin: 5px 0;
+        clear: both;
+    }
+	table.QCList {
+	  border-collapse: collapse;
+	  width: 100%;
+	}
+	
+	table.QCList td, table.QCList th {
+	  border: 1px solid #ddd;
+	  padding: 8px;
+	}
+	
+	table.QCList tr:nth-child(even){background-color: #f2f2f2;}
+	
+	table.QCList tr:hover {background-color: #ddd;}
+	
+	table.QCList th {
+	  padding-top: 12px;
+	  padding-bottom: 12px;
+	  text-align: left;
+	  color: black;
+	}
+   
+    .spnLeft {
+        display: block;
+        float: left;
+        font-weight: bold;
+    }
+    
+    .spnRight {
+        display: block;
+        float: right;
+        font-weight: bold;
+        color: blue
+    }
+    .btnOptions{
+        width: 200px;
+    }    
+    </style>
+    
+</head>
+
+<body>
+
+<!--navbar div with the id-->
+    <section id="section-rp-main">
+        <form>
+         <fieldset>
+            <legend>Amazon Connect Queue APIs</legend>
+            <div>
+               <input type="button" id="awsConfiguration" value="AWS Configurations">
+               <input type="button" id="listQC" value="List all queue">
+               <input type="button" id="createQC" value="Create queue">
+               <input type="button" id="modifyQC" value="Modify queue">
+               <input type="button" id="describeQC" value="Describe queue">               
+               <!-- <input type="button" id="describeHOP" value="Describe HOP">  -->
+            </div>               
+         </fieldset>
+         </form>
+    </section>
+    <section id="section-rp-list">
+        <legend>Selected queue details</legend>
+        <input type="text" id="selectedQC" value="" > 
+        <div style="height: 90%;  overflow: scroll;">
+            <table id="qcListTable" style="width:100%;border:1px;height:80%" class="cell-border compact stripe" /></table>
+        </div>
+    </section>
+
+    <section id="section-json-output">
+        <legend>JSON Output</legend>
+        <div id="rpDivFormatted"><pre id="rpFormatted"></pre></div>
+    </section>
+
+    <div id="dialog" title="Waiting">
+          <span id="waitingSpan">Waiting for server to respond</span>
+    </div>
+    <div id="resultDialog" title="API Result">
+          <span id="resultSpan"></span>
+    </div>
+    
+    <!--  This is the beginning of add queue dialog -->
+    <div id="qcDialog" title="Queue">
+              <form name="qcForm" id="qcForm">
+              <fieldset class="agent-info">
+                <legend>Queue configuration</legend>
+                <div id="createTabs">
+                    <ul>
+                        <li><a href="#tabs-1">Overview</a></li>
+                        <li><a href="#tabs-2">Quick connects</a></li>
+                    </ul>
+                 <div id="tabs-1">
+
+                  <table class='tblDetails' style="width: 300px;">
+                    <tbody>
+                      <tr>
+                        <td>Name</td>
+                        <td>
+                          <input name="qcName" type="text" id="qcName" placeholder="Name">
+                        </td>
+                        <td>Description</td>
+                        <td colspan="3">
+                          <input name="qcDescription" type="text" id="qcDescription" placeholder="Description" style="width: 95%;">
+                        </td>
+                      </tr>
+                      <tr>                         
+                        <td>Caller Id Name</td>
+                        <td>
+                          <input name="qcOutboundCallerIdName" type="text" id="qcOutboundCallerIdName" placeholder="Caller Id Name">
+                        </td>
+                        <td>Number</td>
+                        <td>
+                            <select name="qcOutboundCallerIdNumberId" id="qcOutboundCallerIdNumberId"></select>
+                        </td>
+                        <td>Contact flow</td>
+                        <td>
+                            <select name="qcOutboundFlowId" id="qcOutboundFlowId"></select>
+                        </td>
+                      </tr>  
+                      <tr>
+                        <td>Maximum Contacts</td>
+                        <td><input name="qcMaxContacts" type="text" id="qcMaxContacts" placeholder="Max Contacts"></td>
+                        <td>Hours of operation</td>
+                        <td>
+                            <select name="qcHoursOfOperationId" id="qcHoursOfOperationId" style="width: 95%;"></select>
+                        </td>
+                        <td>Status </td>
+                        <td>
+                            <input name="qcStatus" type="checkbox" id="qcStatus" placeholder="Status" style="width: 70px;">
+                            <span id='queueStatus'></span>
+                        </td>                        
+                      </tr>                      
+                     </tbody>
+                   </table>
+                   <button class="btn btnOptions" type="button" id="btnCreate" > Create queue</button>
+                   <button class="btn btnOptions" type="button" id="btnRename" > Update name  description</button>
+                   <button class="btn btnOptions" type="button" id="btnUpdateHoursOfOperation" >Update hours of operation</button>
+                   <button class="btn btnOptions" type="button" id="btnUpdateOutboundConfig" >Update outbound config</button>
+                   <button class="btn btnOptions" type="button" id="btnUpdateMaxContacts" >Update max contacts</button>
+                   <button class="btn btnOptions" type="button" id="btnUpdateStatus" >Enable/Disable</button>
+                   <button class="btn btnOptions" type="button" id="btnDescribeHOP" >Hours of operations</button>
+                </div>
+                <div id="tabs-2">
+			         <div>
+			             <div>
+			                 <span class="spnLeft"><h2>Quick Connects</h2></span> 
+			                 <span id="spnAddOriginNew" class="spnRight" style="padding-top:25px;">
+			                     <a title="Add Quick Connect" href="#" onclick="showAddQuickConnectDialog();return false;">Add Quick Connect</a>
+			                 </span>
+			             </div>
+			             <table class="QCList" id="tblQuickConnects">
+			                 <thead>
+			                     <tr>
+			                         <th>Quick Connect</th>
+			                         <th>Remove</th>
+			                     </tr>
+			                 </thead>
+			                 <tbody></tbody>
+			             </table>
+			         </div>
+                 </div>
+                </div>
+               </fieldset>
+             </form>
+
+    </div>    
+    <!--  This is the end of add queue dialog -->
+
+    <!--  This is the start of add quick connect dialog -->
+    <div id="describeHOPDialog" title="Hours of operation">
+        <div>
+             <form name="frmHOP" id="frmHOP">
+              <fieldset class="agent-info">
+                <legend>Hour of operations</legend>
+                <div>
+                  <table class="QCList" >
+                    <tbody>
+                      <tr>
+                        <td>
+                          Name : 
+                        </td>
+                        <td>
+                           <span id='spnHOPName'></span>
+                        </td>
+                        <td>
+                          TimeZone : 
+                        </td>
+                        <td>
+                           <span id='spnHOPTZ'></span>
+                        </td>                        
+                      </tr>
+                      <tr>
+                      <td>
+                        Description : 
+                      </td>
+                      <td colspan=3>
+                        <span id='spnHOPDescription'></span>
+                      </td>  
+                      </tr>
+                    </tbody>
+                   </table>
+                 </div>
+                <div>
+                  <table class="QCList" >
+                    <thead><th>Day</th><th>Start</th><th>End</th></thead>
+                    <tbody>                        
+                      <tr>
+                        <td>Sunday </td>
+                        <td><span id='spnSundayStart'></span></td>
+                        <td><span id='spnSundayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Monday </td>
+                        <td><span id='spnMondayStart'></span></td>
+                        <td><span id='spnMondayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Tuesday </td>
+                        <td><span id='spnTuesdayStart'></span></td>
+                        <td><span id='spnTuesdayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Wednesday </td>
+                        <td><span id='spnWednesdayStart'></span></td>
+                        <td><span id='spnWednesdayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Thursday </td>
+                        <td><span id='spnThursdayStart'></span></td>
+                        <td><span id='spnThursdayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Friday </td>
+                        <td><span id='spnFridayStart'></span></td>
+                        <td><span id='spnFridayEnd'></span></td>                        
+                      </tr>
+                      <tr>
+                        <td>Saturday </td>
+                        <td><span id='spnSaturdayStart'></span></td>
+                        <td><span id='spnSaturdayEnd'></span></td>                        
+                      </tr>
+                    </tbody>
+                   </table>
+                 </div>  
+                   
+              </fieldset>
+             </form>
+            
+        </div>
+    
+    </div>
+    <!--  This is the end of add quick connect dialog -->
+        
+    <!--  This is the start of add quick connect dialog -->
+    <div id="addQuickConnectDialog" title="Add Quick Connect">
+        <div>
+             <form name="frmQuickConnect" id="frmQuickConnect">
+              <fieldset class="agent-info">
+                <legend>Quick Connect Details</legend>
+                <div>
+                  <table>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <select name="sltQuickConnect" id="sltQuickConnect" style="width: 350px;"> </select>
+                        </td>
+                      </tr>
+                    </tbody>
+                   </table>
+              </fieldset>
+             </form>
+            
+        </div>
+    
+    </div>
+    <!--  This is the end of add quick connect dialog -->
+    <!-- Beginning of AWS Configurations -->
+    <div id="configDialog" title="AWS IAM Credentials">
+         <form  name="AWSIAMInfo" id="AWSIAMInfo" autocomplete="on">
+              <fieldset class="config-info">
+                   <legend>Enter AWS credentials for quick connects management</legend>
+                      <div>
+                      <table>
+                        <tbody>
+                          <tr>
+                            <td>
+                              <label for="dlgSourceAccessKey">Access Key : </label>
+                            </td>
+                            <td>
+                              <input name="dlgSourceAccessKey" type="text" id="dlgSourceAccessKey" placeholder="Access Key">
+                            </td>
+                            <td>
+                                <label for="dlgSourceRegion">Region : </label>
+                            </td>
+                            <td>
+                              <input name="dlgSourceRegion" type="text" id="dlgSourceRegion" placeholder="Region">
+                            </td>
+                            </tr>
+                            <tr>
+                            <td>
+                              <label for="dlgSourceSecretKey">Secret Key : </label>
+                            </td>
+                            <td colspan=3>
+                              <input name="dlgSourceSecretKey" type="text" id="dlgSourceSecretKey" placeholder="Secret Key" style="width:100%;">
+                            </td>
+                            
+                            </tr>
+                            <tr>
+                            <td>
+                              <label for="dlgInstanceId">Instance Id : </label>
+                            </td>
+                            <td colspan=3>
+                              <input name="dlgInstanceId" type="text" id="dlgInstanceId" placeholder="Instance Id" style="width:100%;">
+                            </td>
+                            </tr>
+                            
+                          </tbody>
+                        </table>
+                   </div>
+              </fieldset>
+              <span id="spnAWSMessage" style="color: red;font-weight: bold;float:left"></span><button class="btn" type="button" id="btnConfiguration" style="width: 200px;float:right"> Save Configurations </button>
+           </form>
+     </div>
+    <div id="confirmDialog" title="Delete?">
+      <p><span class="ui-icon ui-icon-alert" style="float:left; margin:12px 12px 20px 0;"></span>Are you sure you want to delete the quick connect?</p>
+    </div>    
+</body>
+</html>
